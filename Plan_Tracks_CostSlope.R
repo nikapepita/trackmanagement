@@ -8,29 +8,40 @@
 
 #load packages
 
-loadpackages <- function(pkg){
+loadpackages <- function(pkg) {
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-  if (length(new.pkg)) 
+  if (length(new.pkg))
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
 
 # usage
-packages <- c("osmdata", "tidyverse", "sf", "gmap", "gdistance", "raster","rasterVis","rgdal","ggmap")
+packages <-
+  c(
+    "osmdata",
+    "tidyverse",
+    "sf",
+    "gmap",
+    "gdistance",
+    "raster",
+    "rasterVis",
+    "rgdal",
+    "gmap"
+  )
 loadpackages(packages)
 
 ##Input Data
 
-setwd("E:/Annika/R_Project/Data/")
+setwd("G:/R_Project/Data/")
 Startpoint <- readOGR(dsn = ".", layer = "StartJossgrund")
 Startpoint.df <- as(Startpoint, "data.frame")
 
-MKK_shape <- readOGR(dsn = ".", layer="MKK_Kreis")
-Clip_Region <- MKK_shape[2, ]
-ext <- extent(MKK_shape[2, ])
+MKK_shape <- readOGR(dsn = ".", layer = "MKK_Kreis")
+Clip_Region <- MKK_shape[2,]
+ext <- extent(MKK_shape[2,])
 
-SRTM = raster::raster("E:/Annika/R_Project/Data/SRTM.tif")
-LULC = raster::raster("E:/Annika/R_Project/Data/Corine2018.tif")
+SRTM = raster::raster("SRTM.tif")
+LULC = raster::raster("Corine2018.tif")
 
 
 #Set Variable - Study Adrea
@@ -52,61 +63,74 @@ r12 = SRTM_resam + LULC
 SRTM_Masked <- mask(SRTM_resam,  r12)
 SRTM_Cropped <- crop(SRTM_Masked,  Clip_Region)
 
-
-slope <- terrain(SRTM_Cropped, opt = 'slope', unit = 'degrees')  #calculate slope
+slope <-
+  terrain(SRTM_Cropped, opt = 'slope', unit = 'degrees')  #calculate slope
 
 plot(slope)
 
 
-aspect <- terrain(SRTM_Cropped, opt = 'aspect', unit = 'degrees') #calculate aspect
+aspect <-
+  terrain(SRTM_Cropped, opt = 'aspect', unit = 'degrees') #calculate aspect
 
 #Load LULC
 LULC_Masked <- mask(LULC,  r12)
 LULC_Cropped <- crop(LULC_Masked,  Clip_Region)
 
-plot(LULC_Cropped2)
+#disaggregate from 40x40 resolution to 10x10 (factor = 4)
+
+SRTM_Cropped <- disaggregate(SRTM_Cropped, fact = 10)
+res(SRTM_Cropped)
+
+slope <- disaggregate(slope, fact = 10)
+res(slope)
+
+LULC_Cropped  <- disaggregate(LULC_Cropped , fact = 10)
+res(LULC_Cropped)
+
+
+plot(LULC_Cropped)
 
 ###Reclassify LULC
 
 #Urban Fabric
-values(LULC_Cropped)[values(LULC_Cropped) == 111] = 1
-values(LULC_Cropped)[values(LULC_Cropped) == 112] = 1
+values(LULC_Cropped)[values(LULC_Cropped) == 111] = 9
+values(LULC_Cropped)[values(LULC_Cropped) == 112] = 9
 
 #Industrial, commercial and transport units
-values(LULC_Cropped)[values(LULC_Cropped) == 121] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 122] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 123] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 124] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 121] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 122] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 123] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 124] = 10
 
 #Mine,dump and construction sites
-values(LULC_Cropped)[values(LULC_Cropped) == 131] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 132] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 133] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 131] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 132] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 133] = 10
 
 #Artificial, non agricultural vegetated areas
 
-values(LULC_Cropped)[values(LULC_Cropped) == 141] = 2
-values(LULC_Cropped)[values(LULC_Cropped) == 142] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 141] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 142] = 8
 
 #Agricultural areas
 #Arable land
-values(LULC_Cropped)[values(LULC_Cropped) == 211] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 212] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 213] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 211] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 212] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 213] = 10
 
 #Permanet crops
-values(LULC_Cropped)[values(LULC_Cropped) == 221] = 2
-values(LULC_Cropped)[values(LULC_Cropped) == 222] = 2
-values(LULC_Cropped)[values(LULC_Cropped) == 223] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 221] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 222] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 223] = 8
 
 #Pastures
 values(LULC_Cropped)[values(LULC_Cropped) == 231] = 5
 
 #Heterogeneous agricultural areas
-values(LULC_Cropped)[values(LULC_Cropped) == 241] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 242] = 2
-values(LULC_Cropped)[values(LULC_Cropped) == 243] = 2
-values(LULC_Cropped)[values(LULC_Cropped) == 244] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 241] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 242] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 243] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 244] = 8
 
 #Forest and seminatural areas
 #Forest
@@ -116,43 +140,43 @@ values(LULC_Cropped)[values(LULC_Cropped) == 313] = 5
 
 #Shrub and/or herbaceous vegetations associations
 
-values(LULC_Cropped)[values(LULC_Cropped) == 321] = 10
-values(LULC_Cropped)[values(LULC_Cropped) == 322] = 10
-values(LULC_Cropped)[values(LULC_Cropped) == 323] = 7
-values(LULC_Cropped)[values(LULC_Cropped) == 324] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 321] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 322] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 323] = 3
+values(LULC_Cropped)[values(LULC_Cropped) == 324] = 2
 
 #Open spaces with little or no vegetation
 
-values(LULC_Cropped)[values(LULC_Cropped) == 331] = 10
-values(LULC_Cropped)[values(LULC_Cropped) == 332] = 8
-values(LULC_Cropped)[values(LULC_Cropped) == 333] = 7
-values(LULC_Cropped)[values(LULC_Cropped) == 334] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 335] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 331] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 332] = 3
+values(LULC_Cropped)[values(LULC_Cropped) == 333] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 334] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 335] = 10
 
 #Wetlands
 #Inland wetlands
-values(LULC_Cropped)[values(LULC_Cropped) == 411] = 7
-values(LULC_Cropped)[values(LULC_Cropped) == 412] = 7
+values(LULC_Cropped)[values(LULC_Cropped) == 411] = 3
+values(LULC_Cropped)[values(LULC_Cropped) == 412] = 3
 
 #Coastal wetlands
 
-values(LULC_Cropped)[values(LULC_Cropped) == 421] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 422] = 0
-values(LULC_Cropped)[values(LULC_Cropped) == 423] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 421] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 422] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 423] = 10
 
 #Waterbodies
 #Inland waters
-values(LULC_Cropped)[values(LULC_Cropped) == 511] = -1
-values(LULC_Cropped)[values(LULC_Cropped) == 512] = -1
+values(LULC_Cropped)[values(LULC_Cropped) == 511] = 200
+values(LULC_Cropped)[values(LULC_Cropped) == 512] = 200
 
 #Marine waters
-values(LULC_Cropped)[values(LULC_Cropped) == 521] = -1
-values(LULC_Cropped)[values(LULC_Cropped) == 522] = -1
-values(LULC_Cropped)[values(LULC_Cropped) == 523] = -1
+values(LULC_Cropped)[values(LULC_Cropped) == 521] = 200
+values(LULC_Cropped)[values(LULC_Cropped) == 522] = 200
+values(LULC_Cropped)[values(LULC_Cropped) == 523] = 200
 
 plot(LULC_Cropped)
 
-rm(SRTM,SRTM_resam,r12,LULC_Masked,SRTM_Masked,LULC)
+rm(SRTM, SRTM_resam, r12, LULC_Masked, SRTM_Masked, LULC)
 
 #coords <- c(xyFromCell(SRTM_Cropped, LULC_Cropped[i], spatial = FALSE))
 
@@ -211,7 +235,7 @@ waterway <-
 
 waterway <- mask(LULC_Cropped, waterway)
 waterway[is.na(waterway[])] <- 0
-values(waterway)[values(waterway) > 0] = -1
+values(waterway)[values(waterway) >= 0] = 100
 plot(waterway)
 
 
@@ -223,21 +247,21 @@ spring <-
   )
 
 spring <- mask(LULC_Cropped, spring)
-spring[is.na(spring[])] <- 0
-values(spring)[values(spring) > 0] = 10
+values(spring)[values(spring) >= 0] = 0
+spring[is.na(spring[])] <- 10
 plot(spring)
 
 
 highway <-
-  spTransform(
+  spTransform (
     highway,
     "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
   )
 
-#highway <- mask(LULC_Cropped, highway)
-#highway[is.na(highway[])] <- 0
-#values(highway)[values(highway) > 0] = 10
-#plot(highway)
+highway <- mask(LULC_Cropped, highway)
+values(highway)[values(highway) >= 0] = 0
+highway[is.na(highway[])] <- 300
+plot(highway)
 
 
 #Transfer Raster in Dataframe
@@ -252,11 +276,9 @@ colnames(LULC_df) <- c("Longitude", "Latitude", "Class")
 ggplot() +
   geom_raster(data = LULC_df, aes(x = Latitude, y = Longitude, fill = Class)) +
   scale_colour_gradientn(colours = terrain.colors(10)) +
-  geom_point(
-    data = Startpoint.df,
-    aes(x = coords.x2, y = coords.x1),
-    color = "green"
-  ) +
+  geom_point(data = Startpoint.df,
+             aes(x = coords.x2, y = coords.x1),
+             color = "green") +
   theme_bw() +
   coord_equal() +
   scale_fill_gradient("LULC", limits = c(0, 10)) +
@@ -271,15 +293,11 @@ ggplot() +
     legend.key = element_blank()
   )
 
-########### Create Cost Raster 
+########### Create Cost Raster
 
-cost <- stack(LULC_Cropped, spring,slope)
+cost <- stack(LULC_Cropped,highway)
 cost1 <- calc(cost, sum)
-cost1 <- mask(cost1, highway)
-cost2 <- cost1
-cost2[is.na(cost2[])] <- 200
-###Plot Least Coth Path on Cost Raster
-#Transfer Raster in Dataframe
+#cost1 <- mask(cost1, highway)
 
 cost1_temp <- rasterToPoints(cost1)
 
@@ -295,129 +313,206 @@ colnames(cost1_df) <- c("Longitude", "Latitude", "Class")
 #Startpoint <- sampleRandom(cost1, size=1, cells=TRUE, sp=TRUE)
 #Route <- as.data.frame(Startpoint.df)
 
-Route <- raster::extract(
-  cost1, Startpoint.df[1,2:3], df = TRUE, cellnumbers=T)
+Route <- raster::extract(cost1, Startpoint.df[1, 2:3], df = TRUE, cellnumbers =T)
 
 
-Route <- cbind(Route,Startpoint.df[1,2:3])
+Route <- cbind(Route, Startpoint.df[1, 2:3])
 
+length_route <- 500
 
-for(i in 1:35) {
-  
-  
-  rowcol <- rowColFromCell(cost1, Route$cell[i])
-  
-  cell1 <- cellFromRowCol(cost1, c(rowcol[1,1])-1, rowcol[1,2])
-  cell2 <- cellFromRowCol(cost1, c(rowcol[1,1])-1, c(rowcol[1,2])-1)
-  cell3 <- cellFromRowCol(cost1, c(rowcol[1,1])-1, c(rowcol[1,2])+1)
-  cell4 <- cellFromRowCol(cost1, rowcol[1,1], c(rowcol[1,2])+1)
-  cell5 <- cellFromRowCol(cost1, c(rowcol[1,1])+1, c(rowcol[1,2])+1)
-  #cell6 <- cellFromRowCol(cost1, c(rowcol[1,1])+1, c(rowcol[1,2])-1)
-  cell7 <- cellFromRowCol(cost1, c(rowcol[1,1])+1, rowcol[1,2])
-  cell8 <- cellFromRowCol(cost1, rowcol[1,1], c(rowcol[1,2])-1)
-  
-  cells <- as.data.frame(rbind(cell1,cell2,cell3,cell4,cell5,cell7,cell8))
-  #cells <- as.data.frame(rbind(cell1,cell2,cell3,cell4,cell5,cell6,cell7,cell8))
-  
-  xy <- as.data.frame(xyFromCell(cost, cells$V1, spatial = FALSE))
-  
-  cells <- cbind(cells,xy)
-  
-  cent_max <- raster::extract(
-    cost1, cells[,2:3], df = TRUE, cellnumbers=T)
-  
-if (is.na(cent_max$cells[1])) {
-    cell3 <- cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) + 1)
-    cell4 <- cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) + 1)
-    cell5 <-cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, c(rowcol[1, 2]) + 1)
-    cells <- as.data.frame(rbind(cell3, cell4, cell5))
+for (i in 1:length_route) {
+  if (i <= (length_route-10)) {
+    rowcol <- rowColFromCell(cost1, Route$cell[i])
+    
+    cell1 <-
+      cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, rowcol[1, 2])
+    cell2 <-
+      cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) -
+                       1)
+    cell3 <-
+      cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) +
+                       1)
+    cell4 <-
+      cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) + 1)
+    #cell5 <-
+      cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, c(rowcol[1, 2]) +
+                       1)
+    #cell6 <- cellFromRowCol(cost1, c(rowcol[1,1])+1, c(rowcol[1,2])-1)
+    #cell7 <-
+      cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, rowcol[1, 2])
+    cell8 <-
+      cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) - 1)
+    
+    cells <-
+      as.data.frame(rbind(cell1, cell2, cell3, cell4, cell8))
+    #cells <- as.data.frame(rbind(cell1,cell2,cell3,cell4,cell5,cell6,cell7,cell8))
     
     xy <- as.data.frame(xyFromCell(cost, cells$V1, spatial = FALSE))
     
-    cells <- cbind(cells,xy)
+    cells <- cbind(cells, xy)
     
-    cent_max <- raster::extract(
-      cost1, cells[,2:3], df = TRUE, cellnumbers=T)
+    cent_max <-
+      raster::extract(cost1, cells[, 2:3], df = TRUE, cellnumbers = T)
     
-    cent_max = subset(cent_max,!(cent_max$cells %in% Route$cell))
-    
-    cent_max <- cent_max[order(cent_max$layer),]
-    
-    Route[i + 1, 4:5] <-
-    xyFromCell(cost1, cent_max$cells[1], spatial = FALSE)
-    
-    Route[i + 1, 2:3] <- cent_max[1, 2:3]
-    
-    } else {
+    if (is.na(cent_max$cells[1])) {
+      cell3 <-
+        cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) + 1)
+      cell4 <-
+        cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) + 1)
+      cell5 <-
+        cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, c(rowcol[1, 2]) + 1)
+      cells <- as.data.frame(rbind(cell3, cell4, cell5))
       
-      cent_max = subset(cent_max,!(cent_max$cells %in% Route$cell))
+      xy <-
+        as.data.frame(xyFromCell(cost, cells$V1, spatial = FALSE))
       
-      cent_max = subset(cent_max,!is.na(cent_max$layer))
+      cells <- cbind(cells, xy)
       
-      cent_max <- cent_max[order(cent_max$layer),]
+      cent_max <-
+        raster::extract(cost1, cells[, 2:3], df = TRUE, cellnumbers = T)
+      
+      cent_max = subset(cent_max, !(cent_max$cells %in% Route$cell))
+      
+      cent_max <-
+        cent_max[order(cent_max$layer, decreasing = FALSE), ]
       
       Route[i + 1, 4:5] <- xyFromCell(cost1, cent_max$cells[1], spatial = FALSE)
+      
+      Route[i + 1, 2:3] <- cent_max[1, 2:3]
+      
+    } else {
+      cent_max = subset(cent_max, !(cent_max$cells %in% Route$cell))
+      
+      cent_max = subset(cent_max, !is.na(cent_max$layer))
+      
+      cent_max <-
+        cent_max[order(cent_max$layer, decreasing = FALSE), ]
+      
+      Route[i + 1, 4:5] <-
+        xyFromCell(cost1, cent_max$cells[1], spatial = FALSE)
+      
       Route[i + 1, 2:3] <- cent_max[1, 2:3]
     }
-  
-#cent_max = subset(cent_max,!(cent_max$cells %in% Route$cell))
-
-#cent_max <- cent_max[order(cent_max$layer),]
-
-#Route[i + 1, 4:5] <-
-#  xyFromCell(cost1, cent_max$cells[1], spatial = FALSE)
-#Route[i + 1, 2:3] <- cent_max[1, 2:3]
+  } else {
+    cell1 <- cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, rowcol[1, 2])
+    cell2 <- cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) -1)
+    #cell3 <- cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) +1)
+    #cell4 <- cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) + 1)
+    #cell5 <- cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, c(rowcol[1, 2]) +1)
+    cell6 <- cellFromRowCol(cost1, c(rowcol[1,1])+1, c(rowcol[1,2])-1)
+    cell7 <-cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, rowcol[1, 2])
+    cell8 <-cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) - 1)
+    
+    cells <-
+      as.data.frame(rbind(cell1,cell2, cell6, cell7, cell8))
+    #cells <- as.data.frame(rbind(cell1,cell2,cell3,cell4,cell5,cell6,cell7,cell8))
+    
+    xy <- as.data.frame(xyFromCell(cost, cells$V1, spatial = FALSE))
+    
+    cells <- cbind(cells, xy)
+    
+    cent_max <-
+      raster::extract(cost1, cells[, 2:3], df = TRUE, cellnumbers =T)
+    
+    if (is.na(cent_max$cells[1])) {
+      cell3 <-
+        cellFromRowCol(cost1, c(rowcol[1, 1]) - 1, c(rowcol[1, 2]) + 1)
+      cell4 <-
+        cellFromRowCol(cost1, rowcol[1, 1], c(rowcol[1, 2]) + 1)
+      cell5 <-
+        cellFromRowCol(cost1, c(rowcol[1, 1]) + 1, c(rowcol[1, 2]) + 1)
+      cells <- as.data.frame(rbind(cell3, cell4, cell5))
+      
+      xy <-
+        as.data.frame(xyFromCell(cost, cells$V1, spatial = FALSE))
+      
+      cells <- cbind(cells, xy)
+      
+      cent_max <-
+        raster::extract(cost1, cells[, 2:3], df = TRUE, cellnumbers =
+                          T)
+      
+      cent_max = subset(cent_max, !(cent_max$cells %in% Route$cell))
+      
+      cent_max <- cent_max[order(cent_max$layer), ]
+      
+      length_cent_max <- length(cent_max)
+      
+      Route[i + 1, 4:5] <-
+        xyFromCell(cost1, cent_max$cells[length_cent_max], spatial = FALSE)
+      
+      Route[i + 1, 2:3] <- cent_max[length_cent_max, 2:3]
+      
+    } else {
+      cent_max = subset(cent_max, !(cent_max$cells %in% Route$cell))
+      
+      cent_max = subset(cent_max, !is.na(cent_max$layer))
+      
+      cent_max <- cent_max[order(cent_max$layer, decreasing = FALSE), ]
+      
+      Route[i + 1, 4:5] <-
+        xyFromCell(cost1, cent_max$cells[1], spatial = FALSE)
+      
+      Route[i + 1, 2:3] <- cent_max[1, 2:3]
+    }
+  }
 }
 
-x <- Route[,5]
-y <- Route[,4]
 xy <- Route[,c(4,5)]
-# <- xy[, c(2, 1)]
 
-spdf <- SpatialPointsDataFrame(coords = xy, data = Route,
-                               proj4string = CRS("+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+Route_Spatial <- SpatialPointsDataFrame(
+  coords = xy,
+  data = Route,
+  proj4string = CRS(
+    "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
+  )
+)
 
-writeOGR(obj=spdf, dsn="tempdir", layer="spdf", driver="ESRI Shapefile")
-plot(spdf)
+#writeOGR(
+#  obj = spdf,
+#  dsn = "tempdir",
+#  layer = "spdf",
+#  driver = "ESRI Shapefile"
+#)
+#plot(spdf)
 
 ggplot() +
   geom_raster(data = cost1_df,
-              aes(
-                x = Latitude,
-                y = Longitude,
-                fill = Class
-              )) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
-  geom_point(
-    data=Route,
-    aes(x=coords.x2,y=coords.x1),
-    color = "green"
-  ) 
+              aes(x = Latitude,
+                  y = Longitude,
+                  fill = Class)) +
+  scale_colour_gradientn(colours = terrain.colors(300)) +
+  geom_point(data = Route,
+             aes(x = coords.x2, y = coords.x1),
+             color = "green")
 
+Route_Spatial <- mask(LULC_Cropped, Route_Spatial)
+Route_Spatial[is.na(Route_Spatial[])] <- 0
+values(Route_Spatial)[values(Route_Spatial) > 0] = 300
+plot(Route_Spatial)
+
+cost2 <- stack(cost1,Route_Spatial)
+cost2 <- calc(cost2,sum)
 
 ###Least Cost Path
-trCost <- transition(cost1, transitionFunction = min, 8)
+trCost <- transition(cost2, transitionFunction = min, 8)
 trCost2 <- geoCorrection(trCost, type = "c")
 
 
-cost2 <- accCost(trCost2,c(543032.8,5568808))
-cost3 <- costDistance(trCost2,c(543032.8,5568808), c(542352.4,5572853))
+Start_Point <- c(Route[length_route,4:5])
+End_Point <- c(Startpoint.df[1,2:3])
+cost2 <- accCost(trCost2, c(Start_Point$coords.x1,Start_Point$coords.x2))
 
-tr <- transition(1 / rs1, transitionFunction = mean, directions = 4)
-tr <- geoCorrection(tr,
-                    type = "c",
-                    multpl = FALSE,
-                    scl = FALSE)
+cost3 <- costDistance(trCost2, c(Start_Point$coords.x1,Start_Point$coords.x2), 
+                      c(End_Point$coords.x1,End_Point$coords.x2))
 
-a <- c(Startpoint.df[1, 2], Startpoint.df[1, 3])
-
-b <- c(Startpoint.df[2, 2], Startpoint.df[2, 3])
-
-path.1 <- shortestPath(trCost2, a, b, output = "SpatialLines")
+path.1 <- shortestPath(trCost2, c(Start_Point$coords.x1,Start_Point$coords.x2), 
+                       c(End_Point$coords.x1,End_Point$coords.x2), output = "SpatialLines")
 plot(path.1)
 
 path.1.df <-
   SpatialLinesDataFrame(path.1, data = data.frame(ID = 1))
+
 path.1.df_fortify <- fortify(path.1.df)
 
 
@@ -438,17 +533,19 @@ ggplot() +
                 y = cost1_df$Longitude,
                 fill = cost1_df$Class
               )) +
-  scale_colour_gradientn(colours = terrain.colors(10)) +
-  geom_point(
-    data = Startpoint.df,
-    aes(x = Startpoint.df$coords.x2, y = Startpoint.df$coords.x1),
-    color = "green"
-  ) +
-  geom_line(data = path.1.df_fortify,
-            aes(x = path.1.df_fortify$lat, y = path.1.df_fortify$long)) +
+  scale_colour_gradientn(colours = rainbow) +
+  geom_point(data = Startpoint.df,
+             aes(x = Startpoint.df$coords.x2, y = Startpoint.df$coords.x1),
+             color = "black") +
+  geom_point(data = path.1.df_fortify,
+            aes(x = path.1.df_fortify$lat, y = path.1.df_fortify$long),
+            color = "red") +
+  geom_point(data = Route,
+             aes(x = coords.x2, y = coords.x1),
+             color = "red")+
   theme_bw() +
   coord_equal() +
-  scale_fill_gradient("Cost", limits = c(0, 2000)) +
+  scale_fill_gradient("Cost", limits = c(0, 500)) +
   theme(
     axis.title.x = element_text(size = 16),
     axis.title.y = element_text(size = 16, angle = 90),
@@ -460,66 +557,68 @@ ggplot() +
     legend.key = element_blank()
   )
 
-
+##merge Dataframe Lines, extract values, change cost, that the existing route won't be used for
+#wayback, length, extract landuses, slope, include slope in calculation, plot 3D -> Gif and Img,buffer 
+#um Route 
 
 
 
 #####################
 
-data(volcano)
-library(spatstat)
-LLC <- data.frame(E = 174.761345, N = -36.879784)
-coordinates(LLC) <- ~ E + N
-proj4string(LLC) <- CRS("+proj=longlat +datum=WGS84")
-LLC.NZGD49 <- spTransform(LLC, CRS("+init=epsg:27200"))
-volcano.r <- as.im(list(
-  x = seq(
-    from = 2667405,
-    length.out = 61,
-    by = 10
-  ),
-  y = seq(
-    from = 6478705,
-    length.out = 87,
-    by = 10
-  ),
-  z = t(volcano)[61:1, ]
-))
-volcano.sp <- as(volcano.r, "SpatialGridDataFrame")
-proj4string(volcano.sp) <- CRS("+init=epsg:27200")
-str(volcano.sp)
-spplot(volcano.sp,
-       at = seq(min(volcano.sp$v), max(volcano.sp$v), 5),
-       col.regions = topo.colors(45))
+#data(volcano)
+#library(spatstat)
+#LLC <- data.frame(E = 174.761345, N = -36.879784)
+#coordinates(LLC) <- ~ E + N
+#proj4string(LLC) <- CRS("+proj=longlat +datum=WGS84")
+#LLC.NZGD49 <- spTransform(LLC, CRS("+init=epsg:27200"))
+#volcano.r <- as.im(list(
+#  x = seq(
+#    from = 2667405,
+#    length.out = 61,
+#    by = 10
+#  ),
+#  y = seq(
+#    from = 6478705,
+#    length.out = 87,
+#    by = 10
+#  ),
+##  z = t(volcano)[61:1,]
+#))
+#volcano.sp <- as(volcano.r, "SpatialGridDataFrame")
+#proj4string(volcano.sp) <- CRS("+init=epsg:27200")
+#str(volcano.sp)
+#spplot(volcano.sp,
+#       at = seq(min(volcano.sp$v), max(volcano.sp$v), 5),
+#       col.regions = topo.colors(45))
 
-r <- raster(volcano.sp)
+#r <- raster(volcano.sp)
 
-altDiff <- function(x)
-  x[2] - x[1]
-hd <- transition(r, altDiff, 8, symm = FALSE)
+#altDiff <- function(x)
+#  x[2] - x[1]
+#hd <- transition(r, altDiff, 8, symm = FALSE)
 
-slope <- geoCorrection(hd)
+#slope <- geoCorrection(hd)
 
-adj <- adjacent(r,
-                cells = 1:ncell(r),
-                pairs = TRUE,
-                directions = 8)
-speed <- slope
-speed[adj] <- 6 * exp(-3.5 * abs(slope[adj] + 0.05))
+#adj <- adjacent(r,
+#                cells = 1:ncell(r),
+#                pairs = TRUE,
+#                directions = 8)
+#speed <- slope
+#speed[adj] <- 6 * exp(-3.5 * abs(slope[adj] + 0.05))
 
-Conductance <- geoCorrection(speed)
+#Conductance <- geoCorrection(speed)
 
-A <- c(2667670, 6479000)
-B <- c(2667800, 6479400)
-AtoB <- shortestPath(Conductance, A, B, output = "SpatialLines")
-BtoA <- shortestPath(Conductance, B, A, output = "SpatialLines")
+#A <- c(2667670, 6479000)
+#B <- c(2667800, 6479400)
+#AtoB <- shortestPath(Conductance, A, B, output = "SpatialLines")
+#BtoA <- shortestPath(Conductance, B, A, output = "SpatialLines")
 
 
-plot(r,
-     xlab = "x coordinate (m)",
-     ylab = "y coordinate (m)",
-     legend.lab = "Altitude (masl)")
-lines(AtoB, col = "red", lwd = 2)
-lines(BtoA, col = "blue")
-text(A[1] - 10, A[2] - 10, "A")
-text(B[1] + 10, B[2] + 10, "B")
+#plot(r,
+#     xlab = "x coordinate (m)",
+#     ylab = "y coordinate (m)",
+#     legend.lab = "Altitude (masl)")
+#lines(AtoB, col = "red", lwd = 2)
+#lines(BtoA, col = "blue")
+#text(A[1] - 10, A[2] - 10, "A")
+#text(B[1] + 10, B[2] + 10, "B")
