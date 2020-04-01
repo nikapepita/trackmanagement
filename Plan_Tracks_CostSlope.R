@@ -480,12 +480,12 @@ Route_Spatial <- SpatialPointsDataFrame(
   )
 )
 
-Route_Spatial2 <- gBuffer(Route_Spatial,width=400)
+Route_Spatial2 <- gBuffer(Route_Spatial,width=500)
 
 
 Route_Spatial3 <- mask(LULC_Cropped, Route_Spatial2)
 Route_Spatial3[is.na(Route_Spatial3[])] <- 0
-values(Route_Spatial3)[values(Route_Spatial3) > 0] = 300
+values(Route_Spatial3)[values(Route_Spatial3) > 0] = 1000
 plot(Route_Spatial3)
 
 
