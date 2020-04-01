@@ -16,27 +16,26 @@ loadpackages <- function(pkg){
 }
 
 # usage
-packages <- c("osmdata", "tidyverse", "sf", "gmap", "gdistance", "raster","rasterVis","rgdal","ggmaps")
+packages <- c("osmdata", "tidyverse", "sf", "gmap", "gdistance", "raster","rasterVis","rgdal","ggmap")
 loadpackages(packages)
 
 ##Input Data
 
-setwd("G:/R_Project/Data/")
-Startpoint <- readOGR(dsn = ".", layer = "StartNeuengronau")
+setwd("E:/Annika/R_Project/Data/")
+Startpoint <- readOGR(dsn = ".", layer = "StartJossgrund")
 Startpoint.df <- as(Startpoint, "data.frame")
 
-MKK_shape <- read_sf("MKK_Kreis.shp")
+MKK_shape <- readOGR(dsn = ".", layer="MKK_Kreis")
 Clip_Region <- MKK_shape[2, ]
-
 ext <- extent(MKK_shape[2, ])
 
-SRTM = raster::raster("G:/R_Project/Data/SRTM.tif")
-LULC = raster::raster("G:/R_Project/Data/Corine2018.tif")
+SRTM = raster::raster("E:/Annika/R_Project/Data/SRTM.tif")
+LULC = raster::raster("E:/Annika/R_Project/Data/Corine2018.tif")
 
 
 #Set Variable - Study Adrea
 
-AOI <- "Sinntal"
+AOI <- "Jossgrund"
 
 
 ##Download DEM
@@ -62,29 +61,99 @@ aspect <- terrain(SRTM_Cropped, opt = 'aspect', unit = 'degrees') #calculate asp
 LULC_Masked <- mask(LULC,  r12)
 LULC_Cropped <- crop(LULC_Masked,  Clip_Region)
 
-#number of cells
-number <- cellStats(LULC_Cropped, 'sum')
+plot(LULC_Cropped2)
 
-#Create Cost Raster
-LULC_values <- matrix(nrow = 36, ncol = 2)
-LULC_values[, 1] <- c(111,112,121,122,123,124,131,132,133,141,
-                      142,211,221,231,242,243,311,312,313,321,
-                      322,324,331,332, 333,334,335,411,412,421,
-                      423,511,512,521,522,523)
-LULC_values[, 2] <- c(0,0,0,0,0,0,0,0,0,0,
-                      0,0,0,0,0,0,0,0,0,0,
-                      0,0,0,0,0,0,0,0,0,0,
-                      0,0,0,0,0,0)
+###Reclassify LULC
 
-for (i in 1:number) {
-  for (y in 1:36) {
-    LULC_Cropped[i] <-
-      ifelse(LULC_Cropped[i] == LULC_values[y, 1], LULC_values[y, 2], LULC_Cropped[i])
-  }
-  print(LULC_Cropped[i])
-}
+#Urban Fabric
+values(LULC_Cropped)[values(LULC_Cropped) == 111] = 1
+values(LULC_Cropped)[values(LULC_Cropped) == 112] = 1
 
-rm(SRTM,SRTM_resam,r12,LULC_Masked,SRTM_Masked,LULC,number,LULC_values)
+#Industrial, commercial and transport units
+values(LULC_Cropped)[values(LULC_Cropped) == 121] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 122] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 123] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 124] = 0
+
+#Mine,dump and construction sites
+values(LULC_Cropped)[values(LULC_Cropped) == 131] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 132] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 133] = 0
+
+#Artificial, non agricultural vegetated areas
+
+values(LULC_Cropped)[values(LULC_Cropped) == 141] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 142] = 2
+
+#Agricultural areas
+#Arable land
+values(LULC_Cropped)[values(LULC_Cropped) == 211] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 212] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 213] = 0
+
+#Permanet crops
+values(LULC_Cropped)[values(LULC_Cropped) == 221] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 222] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 223] = 2
+
+#Pastures
+values(LULC_Cropped)[values(LULC_Cropped) == 231] = 5
+
+#Heterogeneous agricultural areas
+values(LULC_Cropped)[values(LULC_Cropped) == 241] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 242] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 243] = 2
+values(LULC_Cropped)[values(LULC_Cropped) == 244] = 2
+
+#Forest and seminatural areas
+#Forest
+values(LULC_Cropped)[values(LULC_Cropped) == 311] = 5
+values(LULC_Cropped)[values(LULC_Cropped) == 312] = 5
+values(LULC_Cropped)[values(LULC_Cropped) == 313] = 5
+
+#Shrub and/or herbaceous vegetations associations
+
+values(LULC_Cropped)[values(LULC_Cropped) == 321] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 322] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 323] = 7
+values(LULC_Cropped)[values(LULC_Cropped) == 324] = 8
+
+#Open spaces with little or no vegetation
+
+values(LULC_Cropped)[values(LULC_Cropped) == 331] = 10
+values(LULC_Cropped)[values(LULC_Cropped) == 332] = 8
+values(LULC_Cropped)[values(LULC_Cropped) == 333] = 7
+values(LULC_Cropped)[values(LULC_Cropped) == 334] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 335] = 0
+
+#Wetlands
+#Inland wetlands
+values(LULC_Cropped)[values(LULC_Cropped) == 411] = 7
+values(LULC_Cropped)[values(LULC_Cropped) == 412] = 7
+
+#Coastal wetlands
+
+values(LULC_Cropped)[values(LULC_Cropped) == 421] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 422] = 0
+values(LULC_Cropped)[values(LULC_Cropped) == 423] = 0
+
+#Waterbodies
+#Inland waters
+values(LULC_Cropped)[values(LULC_Cropped) == 511] = -1
+values(LULC_Cropped)[values(LULC_Cropped) == 512] = -1
+
+#Marine waters
+values(LULC_Cropped)[values(LULC_Cropped) == 521] = -1
+values(LULC_Cropped)[values(LULC_Cropped) == 522] = -1
+values(LULC_Cropped)[values(LULC_Cropped) == 523] = -1
+
+plot(LULC_Cropped)
+
+rm(SRTM,SRTM_resam,r12,LULC_Masked,SRTM_Masked,LULC)
+
+#coords <- c(xyFromCell(SRTM_Cropped, LULC_Cropped[i], spatial = FALSE))
+
+#view <- viewshed(SRTM_Cropped, ext, coords, h1 = 0, h2 = 0)
 
 #Download POIs, RoadNetwork
 
@@ -105,70 +174,6 @@ available_tags("amenity")
 #shops
 head(available_tags("shop"))
 
-####building the query
-#OSMlines_route <- getbb(AOI) %>%
-#  opq() %>%
-#  add_osm_feature("route")
-
-
-#OSMlines_highway <- getbb(AOI) %>%
-#  opq() %>%
-#  add_osm_feature("highway")
-
-
-#OSMpoints <- getbb(AOI) %>%
-#  opq() %>%
-#  add_osm_feature("natural", "spring")
-
-####query structure
-
-#str(OSMlines_route)
-#str(OSMlines_highway)
-#str(OSMpoints)
-
-#route <- osmdata_sf(OSMlines_route)
-#highway <- osmdata_sf(OSMlines_highway)
-#spring <- osmdata_sf(OSMpoints)
-
-###Plot OSM Data
-#our background map
-#mad_map <- get_map(getbb(AOI), maptype = "toner-background")
-
-#final map
-
-#ggmap(mad_map) +
-#  geom_sf(
-#    data = spring$osm_points,
-#   inherit.aes = FALSE,
-#  colour = "green",
-# fill = "#004529",
-#alpha = .5,
-#    size = 4,
-#   shape = 21
-#  ) +
-#  labs(x = "", y = "") +
-#  geom_sf(
-#    data = route$osm_lines,
-#    inherit.aes = FALSE,
-#   colour = "red",
-#   fill = "#004529",
-#   alpha = .5,
-#   size = 2,
-#   shape = 21
-# ) +
-# labs(x = "", y = "") +
-# geom_sf(
-#   data = highway$osm_lines,
-#   inherit.aes = FALSE,
-#   colour = "yellow",
-#   fill = "#004529",
-#   alpha = .5,
-#   size = 1,
-#   shape = 21
-#  ) +
-# labs(x = "", y = "")
-
-
 #########Get OSM Data
 
 library(osmdata)
@@ -177,6 +182,13 @@ q1 <- opq(AOI) %>%
   add_osm_feature(key = 'natural', 'spring')
 spring <- osmdata_sp(q1)
 spring <- spring$osm_points
+
+q1 <- opq(AOI) %>%
+  add_osm_feature(key = 'highway')
+highway <- osmdata_sp(q1)
+highway <- highway$osm_lines
+
+####Transfer to Raster
 
 spring <-
   spTransform(
@@ -189,10 +201,7 @@ spring[is.na(spring[])] <- 0
 plot(spring)
 
 
-q1 <- opq(AOI) %>%
-  add_osm_feature(key = 'highway')
-highway <- osmdata_sp(q1)
-highway <- highway$osm_lines
+
 
 highway <-
   spTransform(
@@ -204,11 +213,6 @@ highway <- mask(LULC_Cropped, highway)
 highway[is.na(highway[])] <- 0
 plot(highway)
 
-
-
-####
-#Plot
-###
 
 #Transfer Raster in Dataframe
 
@@ -224,12 +228,12 @@ ggplot() +
   scale_colour_gradientn(colours = terrain.colors(10)) +
   geom_point(
     data = Startpoint.df,
-    aes(x = Startpoint.df$coords.x2, y = Startpoint.df$coords.x1),
+    aes(x = coords.x2, y = coords.x1),
     color = "green"
   ) +
   theme_bw() +
   coord_equal() +
-  scale_fill_gradient("LULC", limits = c(0, 500)) +
+  scale_fill_gradient("LULC", limits = c(0, 10)) +
   theme(
     axis.title.x = element_text(size = 16),
     axis.title.y = element_text(size = 16, angle = 90),
@@ -243,7 +247,7 @@ ggplot() +
 
 ########### Create Cost Raster 
 
-cost <- stack(SRTM_Cropped, LULC_Cropped, spring, highway,area_aspect,area_slope)
+cost <- stack(LULC_Cropped, spring, highway,slope)
 
 cost1 <- calc(cost, sum)
 
@@ -251,6 +255,7 @@ cost1 <- calc(cost, sum)
 set.seed(123)
 
 Startpoint <- sampleRandom(cost1, size=1, cells=TRUE, sp=TRUE)
+Endpoints <- sampleRandom(cost1, size=1, cells=TRUE, sp=TRUE)
 
 
 Route <- as.data.frame(Startpoint)
