@@ -26,7 +26,8 @@ packages <-
     "raster",
     "rasterVis",
     "rgdal",
-    "gmap"
+    "gmap",
+    "rgeos"
   )
 loadpackages(packages)
 
@@ -321,7 +322,7 @@ Route <- cbind(Route, Startpoint.df[1, 2:3])
 length_route <- 500
 
 for (i in 1:length_route) {
-  if (i <= (length_route-10)) {
+  if (i <= (length_route)) {
     rowcol <- rowColFromCell(cost1, Route$cell[i])
     
     cell1 <-
@@ -458,24 +459,6 @@ for (i in 1:length_route) {
   }
 }
 
-xy <- Route[,c(4,5)]
-
-Route_Spatial <- SpatialPointsDataFrame(
-  coords = xy,
-  data = Route,
-  proj4string = CRS(
-    "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
-  )
-)
-
-#writeOGR(
-#  obj = spdf,
-#  dsn = "tempdir",
-#  layer = "spdf",
-#  driver = "ESRI Shapefile"
-#)
-#plot(spdf)
-
 ggplot() +
   geom_raster(data = cost1_df,
               aes(x = Latitude,
@@ -486,10 +469,33 @@ ggplot() +
              aes(x = coords.x2, y = coords.x1),
              color = "green")
 
-Route_Spatial <- mask(LULC_Cropped, Route_Spatial)
-Route_Spatial[is.na(Route_Spatial[])] <- 0
-values(Route_Spatial)[values(Route_Spatial) > 0] = 300
-plot(Route_Spatial)
+
+xy <- Route[,c(4,5)]
+
+Route_Spatial <- SpatialPointsDataFrame(
+  coords = xy,
+  data = Route,
+  proj4string = CRS(
+    "+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
+  )
+)
+
+Route_Spatial2 <- gBuffer(Route_Spatial,width=400)
+
+
+Route_Spatial3 <- mask(LULC_Cropped, Route_Spatial2)
+Route_Spatial3[is.na(Route_Spatial3[])] <- 0
+values(Route_Spatial3)[values(Route_Spatial3) > 0] = 300
+plot(Route_Spatial3)
+
+
+#writeOGR(
+#  obj = spdf,
+#  dsn = "tempdir",
+#  layer = "spdf",
+#  driver = "ESRI Shapefile"
+#)
+#plot(spdf)
 
 cost2 <- stack(cost1,Route_Spatial)
 cost2 <- calc(cost2,sum)
